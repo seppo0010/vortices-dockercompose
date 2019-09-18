@@ -27,3 +27,15 @@ func TestRealCommandStdoutPipeFinished(t *testing.T) {
 	_, err = ioutil.ReadAll(stdoutPipe)
 	assert.NotNil(t, err)
 }
+
+func TestRealCommandSetDir(t *testing.T) {
+	t.Parallel()
+	cmd := (&RealCommander{}).New("pwd")
+	cmd.SetDir("/")
+	stdoutPipe, err := cmd.StdoutPipe()
+	assert.Nil(t, err)
+	cmd.Start()
+	stdout, err := ioutil.ReadAll(stdoutPipe)
+	assert.Nil(t, err)
+	assert.Equal(t, string(stdout), "/\n")
+}
