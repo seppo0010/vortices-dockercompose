@@ -1,6 +1,7 @@
 package dockercompose
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"path"
@@ -8,6 +9,14 @@ import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
+)
+
+type composeStatus int
+
+const (
+	composeStatusSetup composeStatus = iota
+	composeStatusRunning
+	composeStatusStopped
 )
 
 type ComposeConfig struct {
@@ -21,7 +30,7 @@ type Compose struct {
 	*ComposeConfig
 
 	Services map[string]*Service
-	started  bool
+	status   composeStatus
 	cmd      *exec.Cmd
 }
 
@@ -36,12 +45,13 @@ func NewCompose(compose *ComposeConfig) *Compose {
 		tmpDir:        tmpDir,
 		ComposeConfig: compose,
 		Services:      map[string]*Service{},
+		status:        composeStatusSetup,
 	}
 }
 
 func (c *Compose) AddService(name string, serviceConfig *ServiceConfig) *Service {
 	service := &Service{ServiceConfig: serviceConfig}
-	if c.started {
+	if c.status != composeStatusSetup {
 		panic("cannot register a service after started")
 	}
 	if _, found := c.Services[name]; found {
@@ -52,7 +62,7 @@ func (c *Compose) AddService(name string, serviceConfig *ServiceConfig) *Service
 }
 
 func (c *Compose) Start() error {
-	c.started = true
+	c.status = composeStatusRunning
 	err := os.MkdirAll(c.tmpDir, 0744)
 	if err != nil {
 		return err
@@ -74,8 +84,26 @@ func (c *Compose) Start() error {
 	c.cmd = exec.Command("docker-compose", "up", "-d")
 	c.cmd.Dir = c.tmpDir
 
-	if err := c.cmd.Start(); err != nil {
-		log.Fatalf("failed to start docker-compose")
+	if err := c.cmd.Run(); err != nil {
+		log.Errorf("failed to start docker compose: %s", err.Error())
+		return errors.New("failed to start docker-compose")
+	}
+
+	return nil
+}
+
+func (c *Compose) Stop() error {
+	if c.status != composeStatusRunning {
+		return errors.New("cannot stop if status is not running")
+	}
+	c.status = composeStatusStopped
+
+	c.cmd = exec.Command("docker-compose", "down")
+	c.cmd.Dir = c.tmpDir
+
+	if err := c.cmd.Run(); err != nil {
+		log.Errorf("failed to stop docker compose: %s", err.Error())
+		return errors.New("failed to stop docker-compose")
 	}
 
 	return nil
