@@ -47,3 +47,24 @@ func TestFakeCommandStdoutPipeFinished(t *testing.T) {
 	_, err = ioutil.ReadAll(stdoutPipe)
 	assert.NotNil(t, err)
 }
+
+func TestFakeCommandStderrPipe(t *testing.T) {
+	t.Parallel()
+	expectedStderr := "ls: cannot access '/fake': No such file or directory\n"
+	cmd := (&FakeCommander{
+		stderrHandler: func(f *FakeCmd) (*ClosableBuffer, error) {
+			if f.Path == "ls" {
+				return &ClosableBuffer{
+					Buffer: bytes.NewBufferString(expectedStderr),
+				}, nil
+			}
+			return nil, nil
+		},
+	}).New("ls", "/fake")
+	stderrPipe, err := cmd.StderrPipe()
+	assert.Nil(t, err)
+	cmd.Start()
+	stderr, err := ioutil.ReadAll(stderrPipe)
+	assert.Nil(t, err)
+	assert.Equal(t, string(stderr), expectedStderr)
+}

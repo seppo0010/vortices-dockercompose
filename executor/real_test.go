@@ -39,3 +39,15 @@ func TestRealCommandSetDir(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, string(stdout), "/\n")
 }
+
+func TestRealCommandStderrPipe(t *testing.T) {
+	t.Parallel()
+	expectedStderr := "ls: cannot access '/fake': No such file or directory\n"
+	cmd := (&RealCommander{}).New("ls", "/fake")
+	stderrPipe, err := cmd.StderrPipe()
+	assert.Nil(t, err)
+	cmd.Start()
+	stderr, err := ioutil.ReadAll(stderrPipe)
+	assert.Nil(t, err)
+	assert.Equal(t, string(stderr), expectedStderr)
+}
