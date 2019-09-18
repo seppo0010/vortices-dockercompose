@@ -11,6 +11,7 @@ type FakeCmd struct {
 
 	fakeCommander *FakeCommander
 	pipes         []io.Closer
+	finished      chan error
 }
 
 func (f *FakeCmd) SetArgs(args []string) {
@@ -50,20 +51,38 @@ func (f *FakeCmd) StdoutPipe() (io.ReadCloser, error) {
 }
 
 func (f *FakeCmd) Start() error {
-	return nil
-}
-
-func (f *FakeCmd) Run() error {
-	for _, p := range f.pipes {
-		p.Close()
+	if f.fakeCommander.runHandler != nil {
+		go func() {
+			f.finished <- f.fakeCommander.runHandler(f)
+		}()
+	} else {
+		go func() {
+			f.finished <- nil
+		}()
 	}
 	return nil
 }
 
+func (f *FakeCmd) Wait() error {
+	return <-f.finished
+}
+
+func (f *FakeCmd) Run() error {
+	if err := f.Start(); err != nil {
+		return err
+	}
+	err := f.Wait()
+	for _, p := range f.pipes {
+		p.Close()
+	}
+	return err
+}
+
 type FakeCommander struct {
-	stderrHandler func(*FakeCmd) (*ClosableBuffer, error)
-	stdoutHandler func(*FakeCmd) (*ClosableBuffer, error)
-	stdinHandler  func(*FakeCmd) (*ClosableBuffer, error)
+	stderrHandler func(*FakeCmd) (io.ReadCloser, error)
+	stdoutHandler func(*FakeCmd) (io.ReadCloser, error)
+	stdinHandler  func(*FakeCmd) (io.WriteCloser, error)
+	runHandler    func(*FakeCmd) error
 }
 
 func (f *FakeCommander) New(name string, arg ...string) Cmd {
@@ -71,5 +90,6 @@ func (f *FakeCommander) New(name string, arg ...string) Cmd {
 		Path:          name,
 		Args:          arg,
 		fakeCommander: f,
+		finished:      make(chan error),
 	}
 }

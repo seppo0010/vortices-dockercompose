@@ -1,7 +1,8 @@
 package executor
 
 import (
-	"bytes"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -12,13 +13,16 @@ import (
 func TestFakeCommandStdoutPipe(t *testing.T) {
 	t.Parallel()
 	cmd := (&FakeCommander{
-		stdoutHandler: func(f *FakeCmd) (*ClosableBuffer, error) {
+		stdoutHandler: func(f *FakeCmd) (io.ReadCloser, error) {
 			if f.Path == "echo" {
-				return &ClosableBuffer{
-					Buffer: bytes.NewBufferString(strings.Join(f.Args, " ") + "\n"),
-				}, nil
+				r, w := io.Pipe()
+				go func() {
+					w.Write([]byte(strings.Join(f.Args, " ") + "\n"))
+					w.Close()
+				}()
+				return r, nil
 			}
-			return nil, nil
+			panic("unexpected")
 		},
 	}).New("echo", "1", "2")
 	stdoutPipe, err := cmd.StdoutPipe()
@@ -32,13 +36,16 @@ func TestFakeCommandStdoutPipe(t *testing.T) {
 func TestFakeCommandStdoutPipeFinished(t *testing.T) {
 	t.Parallel()
 	cmd := (&FakeCommander{
-		stdoutHandler: func(f *FakeCmd) (*ClosableBuffer, error) {
+		stdoutHandler: func(f *FakeCmd) (io.ReadCloser, error) {
 			if f.Path == "echo" {
-				return &ClosableBuffer{
-					Buffer: bytes.NewBufferString(strings.Join(f.Args, " ") + "\n"),
-				}, nil
+				r, w := io.Pipe()
+				go func() {
+					w.Write([]byte(strings.Join(f.Args, " ") + "\n"))
+					w.Close()
+				}()
+				return r, nil
 			}
-			return nil, nil
+			panic("unexpected")
 		},
 	}).New("echo", "1", "2")
 	stdoutPipe, err := cmd.StdoutPipe()
@@ -52,13 +59,16 @@ func TestFakeCommandStderrPipe(t *testing.T) {
 	t.Parallel()
 	expectedStderr := "ls: cannot access '/fake': No such file or directory\n"
 	cmd := (&FakeCommander{
-		stderrHandler: func(f *FakeCmd) (*ClosableBuffer, error) {
+		stderrHandler: func(f *FakeCmd) (io.ReadCloser, error) {
 			if f.Path == "ls" {
-				return &ClosableBuffer{
-					Buffer: bytes.NewBufferString(expectedStderr),
-				}, nil
+				r, w := io.Pipe()
+				go func() {
+					w.Write([]byte(expectedStderr))
+					w.Close()
+				}()
+				return r, nil
 			}
-			return nil, nil
+			panic("unexpected")
 		},
 	}).New("ls", "/fake")
 	stderrPipe, err := cmd.StderrPipe()
@@ -67,4 +77,51 @@ func TestFakeCommandStderrPipe(t *testing.T) {
 	stderr, err := ioutil.ReadAll(stderrPipe)
 	assert.Nil(t, err)
 	assert.Equal(t, string(stderr), expectedStderr)
+}
+
+func TestFakeCommandStdinPipe(t *testing.T) {
+	t.Parallel()
+	stdinR, stdinW := io.Pipe()
+	stdoutR, stdoutW := io.Pipe()
+	cmd := (&FakeCommander{
+		stdinHandler: func(f *FakeCmd) (io.WriteCloser, error) {
+			if f.Path == "wc" && len(f.Args) == 1 && f.Args[0] == "-c" {
+				return stdinW, nil
+			}
+			panic("unexpected")
+		},
+		stdoutHandler: func(f *FakeCmd) (io.ReadCloser, error) {
+			if f.Path == "wc" && len(f.Args) == 1 && f.Args[0] == "-c" {
+				return stdoutR, nil
+			}
+			panic("unexpected")
+		},
+		runHandler: func(f *FakeCmd) error {
+			if f.Path == "wc" && len(f.Args) == 1 && f.Args[0] == "-c" {
+				read, err := ioutil.ReadAll(stdinR)
+				if err != nil {
+					return err
+				}
+				stdoutW.Write([]byte(fmt.Sprintf("%d\n", len(read))))
+				stdoutW.Close()
+				return nil
+			}
+			panic("unexpected")
+		},
+	}).New("wc", "-c")
+	stdinPipe, err := cmd.StdinPipe()
+	assert.Nil(t, err)
+	stdoutPipe, err := cmd.StdoutPipe()
+	assert.Nil(t, err)
+
+	cmd.Start()
+	n, err := stdinPipe.Write([]byte("hello"))
+	assert.Nil(t, err)
+	assert.Equal(t, n, 5)
+	err = stdinPipe.Close()
+	assert.Nil(t, err)
+
+	stdout, err := ioutil.ReadAll(stdoutPipe)
+	assert.Nil(t, err)
+	assert.Equal(t, string(stdout), "5\n")
 }

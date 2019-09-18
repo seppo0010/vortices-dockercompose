@@ -51,3 +51,23 @@ func TestRealCommandStderrPipe(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, string(stderr), expectedStderr)
 }
+
+func TestRealCommandStdinPipe(t *testing.T) {
+	t.Parallel()
+	cmd := (&RealCommander{}).New("wc", "-c")
+	stdinPipe, err := cmd.StdinPipe()
+	assert.Nil(t, err)
+	stdoutPipe, err := cmd.StdoutPipe()
+	assert.Nil(t, err)
+
+	cmd.Start()
+	n, err := stdinPipe.Write([]byte("hello"))
+	assert.Nil(t, err)
+	assert.Equal(t, n, 5)
+	err = stdinPipe.Close()
+	assert.Nil(t, err)
+
+	stdout, err := ioutil.ReadAll(stdoutPipe)
+	assert.Nil(t, err)
+	assert.Equal(t, string(stdout), "5\n")
+}
