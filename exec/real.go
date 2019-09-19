@@ -1,4 +1,4 @@
-package executor
+package exec
 
 import "os/exec"
 
