@@ -2,13 +2,14 @@ package dockercompose
 
 import (
 	"errors"
-	"os"
-	"os/exec"
 	"path"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
+
+	"github.com/seppo0010/vortices-dockercompose/exec"
+	"github.com/seppo0010/vortices-dockercompose/os"
 )
 
 type composeStatus int
@@ -31,7 +32,8 @@ type Compose struct {
 
 	Services map[string]*Service
 	status   composeStatus
-	cmd      *exec.Cmd
+	exec     exec.Commander
+	os       os.OS
 }
 
 func NewCompose(compose *ComposeConfig) *Compose {
@@ -39,14 +41,22 @@ func NewCompose(compose *ComposeConfig) *Compose {
 		compose.Version = "2.1"
 	}
 	id := uuid.New().String()
-	tmpDir := path.Join(os.TempDir(), "vortices-dockercompose", id)
 	return &Compose{
 		id:            id,
-		tmpDir:        tmpDir,
 		ComposeConfig: compose,
 		Services:      map[string]*Service{},
 		status:        composeStatusSetup,
+
+		exec: &exec.RealCommander{},
+		os:   &os.RealOS{},
 	}
+}
+
+func (c *Compose) getTmpDir() string {
+	if c.tmpDir == "" {
+		c.tmpDir = path.Join(c.os.TempDir(), "vortices-dockercompose", c.id)
+	}
+	return c.tmpDir
 }
 
 func (c *Compose) AddService(name string, serviceConfig *ServiceConfig) *Service {
@@ -63,28 +73,32 @@ func (c *Compose) AddService(name string, serviceConfig *ServiceConfig) *Service
 
 func (c *Compose) Start() error {
 	c.status = composeStatusRunning
-	err := os.MkdirAll(c.tmpDir, 0744)
+	err := c.os.MkdirAll(c.getTmpDir(), 0744)
 	if err != nil {
 		return err
 	}
-	f, err := os.Create(path.Join(c.tmpDir, "docker-compose.yml"))
+	f, err := c.os.Create(path.Join(c.getTmpDir(), "docker-compose.yml"))
 	if err != nil {
 		return err
 	}
-	yml, err := yaml.Marshal(c)
+	encoder := yaml.NewEncoder(f)
+	err = encoder.Encode(c)
 	if err != nil {
 		return err
 	}
-	_, err = f.Write(yml)
+	err = encoder.Close()
 	if err != nil {
 		return err
 	}
-	f.Close()
+	err = f.Close()
+	if err != nil {
+		return err
+	}
 
-	c.cmd = exec.Command("docker-compose", "up", "-d")
-	c.cmd.Dir = c.tmpDir
+	cmd := c.exec.New("docker-compose", "up", "-d")
+	cmd.SetDir(c.getTmpDir())
 
-	if err := c.cmd.Run(); err != nil {
+	if err := cmd.Run(); err != nil {
 		log.Errorf("failed to start docker compose: %s", err.Error())
 		return errors.New("failed to start docker-compose")
 	}
@@ -98,10 +112,10 @@ func (c *Compose) Stop() error {
 	}
 	c.status = composeStatusStopped
 
-	c.cmd = exec.Command("docker-compose", "down")
-	c.cmd.Dir = c.tmpDir
+	cmd := c.exec.New("docker-compose", "down")
+	cmd.SetDir(c.getTmpDir())
 
-	if err := c.cmd.Run(); err != nil {
+	if err := cmd.Run(); err != nil {
 		log.Errorf("failed to stop docker compose: %s", err.Error())
 		return errors.New("failed to stop docker-compose")
 	}
