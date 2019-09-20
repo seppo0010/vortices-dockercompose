@@ -31,6 +31,7 @@ type Compose struct {
 	ComposeConfig `yaml:",inline"`
 
 	Services map[string]*Service
+	Networks map[string]*Network
 	status   composeStatus
 	exec     exec.Commander
 	os       os.OS
@@ -45,6 +46,7 @@ func NewCompose(compose ComposeConfig) *Compose {
 		id:            id,
 		ComposeConfig: compose,
 		Services:      map[string]*Service{},
+		Networks:      map[string]*Network{},
 		status:        composeStatusSetup,
 
 		exec: &exec.RealCommander{},
@@ -59,16 +61,31 @@ func (c *Compose) getTmpDir() string {
 	return c.tmpDir
 }
 
-func (c *Compose) AddService(name string, serviceConfig ServiceConfig) *Service {
-	service := &Service{ServiceConfig: serviceConfig}
+func (c *Compose) AddService(name string, serviceConfig ServiceConfig, networks []*Network) *Service {
 	if c.status != composeStatusSetup {
 		panic("cannot register a service after started")
+	}
+	service := &Service{ServiceConfig: serviceConfig, name: name}
+	if networks != nil {
+		service.SetNetworks(networks)
 	}
 	if _, found := c.Services[name]; found {
 		panic("registering the same service twice")
 	}
 	c.Services[name] = service
 	return service
+}
+
+func (c *Compose) AddNetwork(name string, networkConfig NetworkConfig) *Network {
+	network := &Network{NetworkConfig: networkConfig, name: name}
+	if c.status != composeStatusSetup {
+		panic("cannot register a network after started")
+	}
+	if _, found := c.Networks[name]; found {
+		panic("registering the same network twice")
+	}
+	c.Networks[name] = network
+	return network
 }
 
 func (c *Compose) Start() error {

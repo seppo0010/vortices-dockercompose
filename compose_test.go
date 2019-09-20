@@ -22,7 +22,7 @@ func TestStartStopIntegration(t *testing.T) {
 	compose := NewCompose(ComposeConfig{})
 	compose.AddService("test-service", ServiceConfig{
 		Image: "ubuntu",
-	})
+	}, nil)
 	err := compose.Start()
 	assert.Nil(t, err)
 	err = compose.Stop()
@@ -30,15 +30,17 @@ func TestStartStopIntegration(t *testing.T) {
 }
 
 func TestStart(t *testing.T) {
-ranCommands :=[]*exec.FakeCmd{}
+	ranCommands := []*exec.FakeCmd{}
 	compose, fakeExec, fakeOS := mockCompose()
 	fakeExec.RunHandler = func(cmd *exec.FakeCmd) error {
-        ranCommands = append(ranCommands, cmd)
+		ranCommands = append(ranCommands, cmd)
 		return nil
 	}
+	network1 := compose.AddNetwork("test-network1", NetworkConfig{})
+	network2 := compose.AddNetwork("test-network2", NetworkConfig{})
 	compose.AddService("test-service", ServiceConfig{
 		Image: "ubuntu",
-	})
+	}, []*Network{network1, network2})
 	err := compose.Start()
 	assert.Nil(t, err)
 
@@ -55,19 +57,25 @@ services:
   test-service:
     image: ubuntu
     privileged: false
+    networks:
+    - test-network1
+    - test-network2
+networks:
+  test-network1: {}
+  test-network2: {}
 `)
 }
 
 func TestStop(t *testing.T) {
-    ranCommands :=[]*exec.FakeCmd{}
+	ranCommands := []*exec.FakeCmd{}
 	compose, fakeExec, fakeOS := mockCompose()
 	fakeExec.RunHandler = func(cmd *exec.FakeCmd) error {
-        ranCommands = append(ranCommands, cmd)
+		ranCommands = append(ranCommands, cmd)
 		return nil
 	}
 	compose.AddService("test-service", ServiceConfig{
 		Image: "ubuntu",
-	})
+	}, nil)
 	err := compose.Start()
 	assert.Nil(t, err)
 	err = compose.Stop()
@@ -78,4 +86,16 @@ func TestStop(t *testing.T) {
 	assert.Equal(t, ranCommands[1].Path, "docker-compose")
 	assert.Equal(t, ranCommands[1].Args, []string{"down"})
 	assert.Equal(t, ranCommands[1].Dir, path.Dir(fakeOS.WrittenFiles[0].Name))
+}
+
+func TestNetworkIntegration(t *testing.T) {
+	compose := NewCompose(ComposeConfig{})
+	compose.AddService("test-service", ServiceConfig{
+		Image: "ubuntu",
+	}, nil)
+	compose.AddNetwork("test-network", NetworkConfig{})
+	err := compose.Start()
+	assert.Nil(t, err)
+	err = compose.Stop()
+	assert.Nil(t, err)
 }

@@ -7,4 +7,15 @@ type ServiceConfig struct {
 
 type Service struct {
 	ServiceConfig `yaml:",inline"`
+	name          string
+	NetworkNames  []string `yaml:"networks"`
+	networks      []*Network
+}
+
+func (s *Service) SetNetworks(networks []*Network) {
+	s.networks = networks
+	s.NetworkNames = make([]string, len(s.networks))
+	for i, network := range networks {
+		s.NetworkNames[i] = network.name
+	}
 }
