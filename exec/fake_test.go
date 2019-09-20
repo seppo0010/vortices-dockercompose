@@ -13,7 +13,7 @@ import (
 func TestFakeCommandStdoutPipe(t *testing.T) {
 	t.Parallel()
 	cmd := (&FakeCommander{
-		stdoutHandler: func(f *FakeCmd) (io.ReadCloser, error) {
+		StdoutHandler: func(f *FakeCmd) (io.ReadCloser, error) {
 			if f.Path == "echo" {
 				r, w := io.Pipe()
 				go func() {
@@ -36,7 +36,7 @@ func TestFakeCommandStdoutPipe(t *testing.T) {
 func TestFakeCommandStdoutPipeFinished(t *testing.T) {
 	t.Parallel()
 	cmd := (&FakeCommander{
-		stdoutHandler: func(f *FakeCmd) (io.ReadCloser, error) {
+		StdoutHandler: func(f *FakeCmd) (io.ReadCloser, error) {
 			if f.Path == "echo" {
 				r, w := io.Pipe()
 				go func() {
@@ -59,7 +59,7 @@ func TestFakeCommandStderrPipe(t *testing.T) {
 	t.Parallel()
 	expectedStderr := "ls: cannot access '/fake': No such file or directory\n"
 	cmd := (&FakeCommander{
-		stderrHandler: func(f *FakeCmd) (io.ReadCloser, error) {
+		StderrHandler: func(f *FakeCmd) (io.ReadCloser, error) {
 			if f.Path == "ls" {
 				r, w := io.Pipe()
 				go func() {
@@ -84,19 +84,19 @@ func TestFakeCommandStdinPipe(t *testing.T) {
 	stdinR, stdinW := io.Pipe()
 	stdoutR, stdoutW := io.Pipe()
 	cmd := (&FakeCommander{
-		stdinHandler: func(f *FakeCmd) (io.WriteCloser, error) {
+		StdinHandler: func(f *FakeCmd) (io.WriteCloser, error) {
 			if f.Path == "wc" && len(f.Args) == 1 && f.Args[0] == "-c" {
 				return stdinW, nil
 			}
 			panic("unexpected")
 		},
-		stdoutHandler: func(f *FakeCmd) (io.ReadCloser, error) {
+		StdoutHandler: func(f *FakeCmd) (io.ReadCloser, error) {
 			if f.Path == "wc" && len(f.Args) == 1 && f.Args[0] == "-c" {
 				return stdoutR, nil
 			}
 			panic("unexpected")
 		},
-		runHandler: func(f *FakeCmd) error {
+		RunHandler: func(f *FakeCmd) error {
 			if f.Path == "wc" && len(f.Args) == 1 && f.Args[0] == "-c" {
 				read, err := ioutil.ReadAll(stdinR)
 				if err != nil {

@@ -18,12 +18,12 @@ type FakeWrittenFile struct {
 }
 
 type FakeOS struct {
-	dirs         []FakeDir
-	writtenFiles []*FakeWrittenFile
+	Dirs         []FakeDir
+	WrittenFiles []*FakeWrittenFile
 }
 
 func (f *FakeOS) MkdirAll(path string, perm os.FileMode) error {
-	f.dirs = append(f.dirs, FakeDir{
+	f.Dirs = append(f.Dirs, FakeDir{
 		Path: path,
 		Perm: perm,
 	})
@@ -38,7 +38,7 @@ func (f *FakeOS) Create(name string) (io.WriteCloser, error) {
 	r, w := io.Pipe()
 	buffer := &bytes.Buffer{}
 	go func() { io.Copy(buffer, r) }()
-	f.writtenFiles = append(f.writtenFiles, &FakeWrittenFile{
+	f.WrittenFiles = append(f.WrittenFiles, &FakeWrittenFile{
 		Name:     name,
 		Contents: buffer,
 	})
@@ -47,13 +47,13 @@ func (f *FakeOS) Create(name string) (io.WriteCloser, error) {
 
 func (f *FakeOS) RemoveAll(path string) error {
 	i := 0 // output index
-	for _, x := range f.dirs {
+	for _, x := range f.Dirs {
 		if !strings.HasPrefix(x.Path, path) {
 			// copy and increment index
-			f.dirs[i] = x
+			f.Dirs[i] = x
 			i++
 		}
 	}
-	f.dirs = f.dirs[:i]
+	f.Dirs = f.Dirs[:i]
 	return nil
 }

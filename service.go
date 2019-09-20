@@ -6,5 +6,5 @@ type ServiceConfig struct {
 }
 
 type Service struct {
-	*ServiceConfig
+	ServiceConfig `yaml:",inline"`
 }

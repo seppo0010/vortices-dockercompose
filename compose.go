@@ -28,7 +28,7 @@ type Compose struct {
 	id     string
 	tmpDir string
 
-	*ComposeConfig
+	ComposeConfig `yaml:",inline"`
 
 	Services map[string]*Service
 	status   composeStatus
@@ -36,7 +36,7 @@ type Compose struct {
 	os       os.OS
 }
 
-func NewCompose(compose *ComposeConfig) *Compose {
+func NewCompose(compose ComposeConfig) *Compose {
 	if compose.Version == "" {
 		compose.Version = "2.1"
 	}
@@ -59,7 +59,7 @@ func (c *Compose) getTmpDir() string {
 	return c.tmpDir
 }
 
-func (c *Compose) AddService(name string, serviceConfig *ServiceConfig) *Service {
+func (c *Compose) AddService(name string, serviceConfig ServiceConfig) *Service {
 	service := &Service{ServiceConfig: serviceConfig}
 	if c.status != composeStatusSetup {
 		panic("cannot register a service after started")

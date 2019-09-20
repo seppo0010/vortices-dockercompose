@@ -27,7 +27,7 @@ func (f *FakeCmd) SetDir(dir string) {
 }
 
 func (f *FakeCmd) StderrPipe() (io.ReadCloser, error) {
-	pipe, err := f.fakeCommander.stderrHandler(f)
+	pipe, err := f.fakeCommander.StderrHandler(f)
 	if pipe != nil {
 		f.pipes = append(f.pipes, pipe)
 	}
@@ -35,7 +35,7 @@ func (f *FakeCmd) StderrPipe() (io.ReadCloser, error) {
 }
 
 func (f *FakeCmd) StdinPipe() (io.WriteCloser, error) {
-	pipe, err := f.fakeCommander.stdinHandler(f)
+	pipe, err := f.fakeCommander.StdinHandler(f)
 	if pipe != nil {
 		f.pipes = append(f.pipes, pipe)
 	}
@@ -43,7 +43,7 @@ func (f *FakeCmd) StdinPipe() (io.WriteCloser, error) {
 }
 
 func (f *FakeCmd) StdoutPipe() (io.ReadCloser, error) {
-	pipe, err := f.fakeCommander.stdoutHandler(f)
+	pipe, err := f.fakeCommander.StdoutHandler(f)
 	if pipe != nil {
 		f.pipes = append(f.pipes, pipe)
 	}
@@ -51,9 +51,9 @@ func (f *FakeCmd) StdoutPipe() (io.ReadCloser, error) {
 }
 
 func (f *FakeCmd) Start() error {
-	if f.fakeCommander.runHandler != nil {
+	if f.fakeCommander.RunHandler != nil {
 		go func() {
-			f.finished <- f.fakeCommander.runHandler(f)
+			f.finished <- f.fakeCommander.RunHandler(f)
 		}()
 	} else {
 		go func() {
@@ -79,10 +79,10 @@ func (f *FakeCmd) Run() error {
 }
 
 type FakeCommander struct {
-	stderrHandler func(*FakeCmd) (io.ReadCloser, error)
-	stdoutHandler func(*FakeCmd) (io.ReadCloser, error)
-	stdinHandler  func(*FakeCmd) (io.WriteCloser, error)
-	runHandler    func(*FakeCmd) error
+	StderrHandler func(*FakeCmd) (io.ReadCloser, error)
+	StdoutHandler func(*FakeCmd) (io.ReadCloser, error)
+	StdinHandler  func(*FakeCmd) (io.WriteCloser, error)
+	RunHandler    func(*FakeCmd) error
 }
 
 func (f *FakeCommander) New(name string, arg ...string) Cmd {
