@@ -65,7 +65,7 @@ func (c *Compose) AddService(name string, serviceConfig ServiceConfig, networks 
 	if c.status != composeStatusSetup {
 		panic("cannot register a service after started")
 	}
-	service := &Service{ServiceConfig: serviceConfig, name: name}
+	service := &Service{ServiceConfig: serviceConfig, ContainerName: name, name: name, compose: c}
 	if networks != nil {
 		service.SetNetworks(networks)
 	}

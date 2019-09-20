@@ -1,6 +1,7 @@
 package dockercompose
 
 import (
+	"net"
 	"path"
 	"testing"
 
@@ -57,6 +58,7 @@ services:
   test-service:
     image: ubuntu
     privileged: false
+    container_name: test-service
     networks:
     - test-network1
     - test-network2
@@ -96,6 +98,32 @@ func TestNetworkIntegration(t *testing.T) {
 	compose.AddNetwork("test-network", NetworkConfig{})
 	err := compose.Start()
 	assert.Nil(t, err)
+	err = compose.Stop()
+	assert.Nil(t, err)
+}
+
+func TestGetIPAddressIntegration(t *testing.T) {
+	compose := NewCompose(ComposeConfig{})
+	network1 := compose.AddNetwork("test-network1", NetworkConfig{})
+	network2 := compose.AddNetwork("test-network2", NetworkConfig{})
+	service := compose.AddService("test-service", ServiceConfig{
+		Image:   "ubuntu",
+		Command: []string{"sleep", "infinity"},
+	}, []*Network{network1, network2})
+	err := compose.Start()
+	assert.Nil(t, err)
+
+	ip1, err := service.GetIPAddressForNetwork(network1)
+	assert.Nil(t, err)
+	ip2, err := service.GetIPAddressForNetwork(network2)
+	assert.Nil(t, err)
+
+	parsedIP1 := net.ParseIP(ip1)
+	assert.NotNil(t, parsedIP1)
+	parsedIP2 := net.ParseIP(ip2)
+	assert.NotNil(t, parsedIP2)
+	assert.NotEqual(t, ip1, ip2)
+
 	err = compose.Stop()
 	assert.Nil(t, err)
 }
