@@ -57,3 +57,25 @@ services:
     privileged: false
 `)
 }
+
+func TestStop(t *testing.T) {
+    ranCommands :=[]*exec.FakeCmd{}
+	compose, fakeExec, fakeOS := mockCompose()
+	fakeExec.RunHandler = func(cmd *exec.FakeCmd) error {
+        ranCommands = append(ranCommands, cmd)
+		return nil
+	}
+	compose.AddService("test-service", ServiceConfig{
+		Image: "ubuntu",
+	})
+	err := compose.Start()
+	assert.Nil(t, err)
+	err = compose.Stop()
+	assert.Nil(t, err)
+
+	assert.Equal(t, len(ranCommands), 2)
+
+	assert.Equal(t, ranCommands[1].Path, "docker-compose")
+	assert.Equal(t, ranCommands[1].Args, []string{"down"})
+	assert.Equal(t, ranCommands[1].Dir, path.Dir(fakeOS.WrittenFiles[0].Name))
+}
