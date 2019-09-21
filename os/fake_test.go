@@ -40,3 +40,21 @@ func TestFakeMakeDeleteFile(t *testing.T) {
 	err = os.RemoveAll(dir)
 	assert.Nil(t, err)
 }
+
+func TestFakeFileExists(t *testing.T) {
+	os := &FakeOS{}
+	tempdir := os.TempDir()
+	dir := path.Join(tempdir, "a")
+	err := os.MkdirAll(dir, 0744)
+	assert.Nil(t, err)
+	assert.Equal(t, os.FileExists(dir), true)
+	filePath := path.Join(dir, "c")
+	f, err := os.Create(filePath)
+	assert.Nil(t, err)
+	f.Close()
+	assert.Nil(t, err)
+	assert.Equal(t, os.FileExists(filePath), true)
+	err = os.RemoveAll(dir)
+	assert.Nil(t, err)
+	assert.Equal(t, os.FileExists(filePath), false)
+}

@@ -22,3 +22,8 @@ func (*RealOS) TempDir() string {
 func (*RealOS) Create(name string) (io.WriteCloser, error) {
 	return os.Create(name)
 }
+
+func (*RealOS) FileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil || !os.IsNotExist(err)
+}

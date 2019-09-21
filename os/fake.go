@@ -55,5 +55,28 @@ func (f *FakeOS) RemoveAll(path string) error {
 		}
 	}
 	f.Dirs = f.Dirs[:i]
+	i = 0
+	for _, x := range f.WrittenFiles {
+		if !strings.HasPrefix(x.Name, path) {
+			// copy and increment index
+			f.WrittenFiles[i] = x
+			i++
+		}
+	}
+	f.WrittenFiles = f.WrittenFiles[:i]
 	return nil
+}
+
+func (f *FakeOS) FileExists(path string) bool {
+	for _, dir := range f.Dirs {
+		if strings.HasPrefix(dir.Path, path) {
+			return true
+		}
+	}
+	for _, f := range f.WrittenFiles {
+		if f.Name == path {
+			return true
+		}
+	}
+	return false
 }

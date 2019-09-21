@@ -10,4 +10,5 @@ type OS interface {
 	RemoveAll(path string) error
 	TempDir() string
 	Create(name string) (io.WriteCloser, error)
+	FileExists(path string) bool
 }
