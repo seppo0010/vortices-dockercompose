@@ -13,3 +13,7 @@ type Cmd interface {
 	Wait() error
 	Run() error
 }
+
+type Commander interface {
+	New(name string, arg ...string) Cmd
+}

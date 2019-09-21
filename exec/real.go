@@ -18,10 +18,6 @@ func (r *RealCmd) SetDir(dir string) {
 	r.Cmd.Dir = dir
 }
 
-type Commander interface {
-	New(name string, arg ...string) Cmd
-}
-
 type RealCommander struct{}
 
 func (*RealCommander) New(name string, arg ...string) Cmd {
