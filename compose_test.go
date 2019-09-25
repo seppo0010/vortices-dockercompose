@@ -1,6 +1,7 @@
 package dockercompose
 
 import (
+	"io"
 	"net"
 	"path"
 	"testing"
@@ -126,4 +127,39 @@ func TestGetIPAddressIntegration(t *testing.T) {
 
 	err = compose.Stop()
 	assert.Nil(t, err)
+}
+
+func TestBuildDockerIntegration(t *testing.T) {
+	compose := NewCompose(ComposeConfig{})
+	img, err := compose.BuildDocker("ubuntu copy", "FROM ubuntu\nRUN echo 1 > /a")
+	assert.Nil(t, err)
+	assert.NotNil(t, img)
+	assert.NotEqual(t, img, "")
+}
+
+func TestBuildDocker(t *testing.T) {
+	ranCommands := []*exec.FakeCmd{}
+	compose, fakeExec, _ := mockCompose()
+	fakeExec.RunHandler = func(cmd *exec.FakeCmd) error {
+		ranCommands = append(ranCommands, cmd)
+		return nil
+	}
+	fakeExec.StdoutHandler = func(cmd *exec.FakeCmd) (io.ReadCloser, error) {
+		if cmd.Path == "docker" && len(cmd.Args) == 2 && cmd.Args[0] == "build" && cmd.Args[1] == "/tmp/buildme" {
+			r, w := io.Pipe()
+			go func() {
+				w.Write([]byte("la la la \nSuccessfully built abcdef\n"))
+				w.Close()
+			}()
+			return r, nil
+		}
+		panic("unexpected")
+	}
+	img, err := compose.buildDocker("ubuntu copy", "FROM ubuntu\nRUN echo 1 > /a", "buildme")
+
+	assert.Equal(t, ranCommands[0].Path, "docker")
+	assert.Equal(t, ranCommands[0].Args, []string{"build", "/tmp/buildme"})
+
+	assert.Nil(t, err)
+	assert.Equal(t, img, "abcdef")
 }

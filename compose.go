@@ -2,7 +2,10 @@ package dockercompose
 
 import (
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"path"
+	"regexp"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -112,6 +115,9 @@ func (c *Compose) Start() error {
 		return err
 	}
 
+	log.Infof("starting docker compose")
+	defer log.Infof("finished starting docker compose")
+
 	cmd := c.exec.New("docker-compose", "up", "-d")
 	cmd.SetDir(c.getTmpDir())
 
@@ -129,6 +135,9 @@ func (c *Compose) Stop() error {
 	}
 	c.status = composeStatusStopped
 
+	log.Infof("stopping docker compose")
+	defer log.Infof("finished stopping docker compose")
+
 	cmd := c.exec.New("docker-compose", "down")
 	cmd.SetDir(c.getTmpDir())
 
@@ -138,4 +147,58 @@ func (c *Compose) Stop() error {
 	}
 
 	return nil
+}
+
+func (c *Compose) BuildDockerPath(name, path string) (string, error) {
+	if !c.os.FileExists(path) {
+		return "", fmt.Errorf("path %s does not exist", path)
+	}
+
+	log.Infof("starting to build docker image %s", name)
+	defer log.Infof("finished building docker image %s", name)
+
+	cmd := c.exec.New("docker", "build", path)
+	outPipe, err := cmd.StdoutPipe()
+	err = cmd.Start()
+	if err != nil {
+		return "", fmt.Errorf("failed to build docker image at path %s: %s", path, err.Error())
+	}
+	out, err := ioutil.ReadAll(outPipe)
+	if err != nil {
+		return "", fmt.Errorf("failed to read docker image at path %s: %s", path, err.Error())
+	}
+	if err = cmd.Wait(); err != nil {
+		return "", fmt.Errorf("failed to build docker image at path %s: %s", path, err.Error())
+	}
+	submatches := regexp.MustCompile(`Successfully built ([a-fA-F0-9]*)`).FindStringSubmatch(string(out))
+	if len(submatches) == 0 {
+		return "", fmt.Errorf("could not find docker image tag. Full output:\n%s", string(out))
+	}
+	return submatches[1], nil
+}
+
+func (c *Compose) BuildDocker(name, script string) (string, error) {
+	return c.buildDocker(name, script, uuid.New().String())
+}
+
+func (c *Compose) buildDocker(name, script, uuidString string) (string, error) {
+	dirPath := path.Join(c.os.TempDir(), uuidString)
+	err := c.os.MkdirAll(dirPath, 0744)
+	if err != nil {
+		return "", err
+	}
+
+	filePath := path.Join(dirPath, "Dockerfile")
+	f, err := c.os.Create(filePath)
+	if err != nil {
+		return "", err
+	}
+	_, err = f.Write([]byte(script))
+	if err != nil {
+		return "", err
+	}
+	f.Close()
+	defer c.os.RemoveAll(dirPath)
+
+	return c.BuildDockerPath(name, dirPath)
 }
