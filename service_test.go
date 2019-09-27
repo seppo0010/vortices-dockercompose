@@ -51,7 +51,10 @@ func TestIPAddressForNetwork(t *testing.T) {
 
 	network1 := compose.AddNetwork("network1", NetworkConfig{})
 	network2 := compose.AddNetwork("network2", NetworkConfig{})
-	service := compose.AddService("test-service", ServiceConfig{}, []*Network{network1, network2})
+	service := compose.AddService("test-service", ServiceConfig{}, []ServiceNetworkConfig{
+		ServiceNetworkConfig{Network: network1},
+		ServiceNetworkConfig{Network: network2},
+	})
 	ipAddress, err := service.GetIPAddressForNetwork(network2)
 	assert.Nil(t, err)
 	assert.Equal(t, ipAddress, "5.6.7.8")

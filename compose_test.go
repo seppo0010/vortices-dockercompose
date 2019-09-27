@@ -42,7 +42,10 @@ func TestStart(t *testing.T) {
 	network2 := compose.AddNetwork("test-network2", NetworkConfig{})
 	compose.AddService("test-service", ServiceConfig{
 		Image: "ubuntu",
-	}, []*Network{network1, network2})
+	}, []ServiceNetworkConfig{
+		ServiceNetworkConfig{Network: network1, Aliases: []string{"alias1", "alias2"}},
+		ServiceNetworkConfig{Network: network2},
+	})
 	err := compose.Start()
 	assert.Nil(t, err)
 
@@ -61,8 +64,11 @@ services:
     privileged: false
     container_name: test-service
     networks:
-    - test-network1
-    - test-network2
+      test-network1:
+        aliases:
+        - alias1
+        - alias2
+      test-network2: {}
 networks:
   test-network1: {}
   test-network2: {}
@@ -110,7 +116,10 @@ func TestGetIPAddressIntegration(t *testing.T) {
 	service := compose.AddService("test-service", ServiceConfig{
 		Image:   "ubuntu",
 		Command: []string{"sleep", "infinity"},
-	}, []*Network{network1, network2})
+	}, []ServiceNetworkConfig{
+		ServiceNetworkConfig{Network: network1},
+		ServiceNetworkConfig{Network: network2},
+	})
 	err := compose.Start()
 	assert.Nil(t, err)
 

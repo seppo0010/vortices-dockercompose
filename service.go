@@ -16,19 +16,24 @@ type ServiceConfig struct {
 }
 
 type Service struct {
-	ServiceConfig `yaml:",inline"`
-	ContainerName string `yaml:"container_name"`
-	name          string
-	NetworkNames  []string `yaml:"networks"`
-	networks      []*Network
-	compose       *Compose
+	ServiceConfig         `yaml:",inline"`
+	ContainerName         string `yaml:"container_name"`
+	name                  string
+	Networks              map[string]ServiceNetworkConfig `yaml:"networks"`
+	compose               *Compose
+	serviceNetworksConfig []ServiceNetworkConfig
 }
 
-func (s *Service) SetNetworks(networks []*Network) {
-	s.networks = networks
-	s.NetworkNames = make([]string, len(s.networks))
-	for i, network := range networks {
-		s.NetworkNames[i] = network.name
+type ServiceNetworkConfig struct {
+	Network *Network `yaml:"-"`
+	Aliases []string `yaml:"aliases,omitempty"`
+}
+
+func (s *Service) SetNetworks(serviceNetworksConfig []ServiceNetworkConfig) {
+	s.serviceNetworksConfig = serviceNetworksConfig
+	s.Networks = make(map[string]ServiceNetworkConfig, len(s.serviceNetworksConfig))
+	for _, network := range s.serviceNetworksConfig {
+		s.Networks[network.Network.name] = network
 	}
 }
 

@@ -64,7 +64,7 @@ func (c *Compose) getTmpDir() string {
 	return c.tmpDir
 }
 
-func (c *Compose) AddService(name string, serviceConfig ServiceConfig, networks []*Network) *Service {
+func (c *Compose) AddService(name string, serviceConfig ServiceConfig, networks []ServiceNetworkConfig) *Service {
 	if c.status != composeStatusSetup {
 		panic("cannot register a service after started")
 	}
