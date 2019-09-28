@@ -2,6 +2,7 @@ package dockercompose
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"testing"
 
@@ -75,6 +76,7 @@ func TestExec(t *testing.T) {
 	assert.Equal(t, len(ranCommands), 1)
 	assert.Equal(t, ranCommands[0].Path, "docker-compose")
 	assert.Equal(t, ranCommands[0].Args, []string{"exec", "test-service", "ping", "google.com"})
+	assert.Equal(t, ranCommands[0].Dir, fmt.Sprintf("/tmp/vortices-dockercompose/%s", compose.id))
 }
 
 func TestSudoExec(t *testing.T) {
@@ -92,4 +94,5 @@ func TestSudoExec(t *testing.T) {
 	assert.Equal(t, len(ranCommands), 1)
 	assert.Equal(t, ranCommands[0].Path, "docker-compose")
 	assert.Equal(t, ranCommands[0].Args, []string{"exec", "--privileged", "test-service", "ping", "google.com"})
+	assert.Equal(t, ranCommands[0].Dir, fmt.Sprintf("/tmp/vortices-dockercompose/%s", compose.id))
 }

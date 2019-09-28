@@ -41,12 +41,16 @@ func (s *Service) SetNetworks(serviceNetworksConfig []ServiceNetworkConfig) {
 
 func (s *Service) Exec(path string, args ...string) exec.Cmd {
 	args = append([]string{"exec", s.name, path}, args...)
-	return s.compose.exec.New("docker-compose", args...)
+	cmd := s.compose.exec.New("docker-compose", args...)
+	cmd.SetDir(s.compose.getTmpDir())
+	return cmd
 }
 
 func (s *Service) SudoExec(path string, args ...string) exec.Cmd {
 	args = append([]string{"exec", "--privileged", s.name, path}, args...)
-	return s.compose.exec.New("docker-compose", args...)
+	cmd := s.compose.exec.New("docker-compose", args...)
+	cmd.SetDir(s.compose.getTmpDir())
+	return cmd
 }
 
 func (s *Service) GetIPAddressForNetwork(network *Network) (string, error) {
