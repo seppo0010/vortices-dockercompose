@@ -75,7 +75,7 @@ func TestExec(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, len(ranCommands), 1)
 	assert.Equal(t, ranCommands[0].Path, "docker-compose")
-	assert.Equal(t, ranCommands[0].Args, []string{"exec", "test-service", "ping", "google.com"})
+	assert.Equal(t, ranCommands[0].Args, []string{"exec", "-T", "test-service", "ping", "google.com"})
 	assert.Equal(t, ranCommands[0].Dir, fmt.Sprintf("/tmp/vortices-dockercompose/%s", compose.id))
 }
 
@@ -93,6 +93,6 @@ func TestSudoExec(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, len(ranCommands), 1)
 	assert.Equal(t, ranCommands[0].Path, "docker-compose")
-	assert.Equal(t, ranCommands[0].Args, []string{"exec", "--privileged", "test-service", "ping", "google.com"})
+	assert.Equal(t, ranCommands[0].Args, []string{"exec", "-T", "--privileged", "test-service", "ping", "google.com"})
 	assert.Equal(t, ranCommands[0].Dir, fmt.Sprintf("/tmp/vortices-dockercompose/%s", compose.id))
 }
