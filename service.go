@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/seppo0010/vortices-dockercompose/exec"
 )
 
 type ServiceConfig struct {
@@ -35,6 +37,16 @@ func (s *Service) SetNetworks(serviceNetworksConfig []ServiceNetworkConfig) {
 	for _, network := range s.serviceNetworksConfig {
 		s.Networks[network.Network.name] = network
 	}
+}
+
+func (s *Service) Exec(path string, args ...string) exec.Cmd {
+	args = append([]string{"exec", s.name, path}, args...)
+	return s.compose.exec.New("docker-compose", args...)
+}
+
+func (s *Service) SudoExec(path string, args ...string) exec.Cmd {
+	args = append([]string{"exec", "--privileged", s.name, path}, args...)
+	return s.compose.exec.New("docker-compose", args...)
 }
 
 func (s *Service) GetIPAddressForNetwork(network *Network) (string, error) {

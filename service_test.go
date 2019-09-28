@@ -59,3 +59,37 @@ func TestIPAddressForNetwork(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, ipAddress, "5.6.7.8")
 }
+
+func TestExec(t *testing.T) {
+	ranCommands := []*exec.FakeCmd{}
+	compose, fakeExec, _ := mockCompose()
+	fakeExec.RunHandler = func(cmd *exec.FakeCmd) error {
+		ranCommands = append(ranCommands, cmd)
+		return nil
+	}
+
+	service := compose.AddService("test-service", ServiceConfig{}, []ServiceNetworkConfig{})
+	cmd := service.Exec("ping", "google.com")
+	err := cmd.Run()
+	assert.Nil(t, err)
+	assert.Equal(t, len(ranCommands), 1)
+	assert.Equal(t, ranCommands[0].Path, "docker-compose")
+	assert.Equal(t, ranCommands[0].Args, []string{"exec", "test-service", "ping", "google.com"})
+}
+
+func TestSudoExec(t *testing.T) {
+	ranCommands := []*exec.FakeCmd{}
+	compose, fakeExec, _ := mockCompose()
+	fakeExec.RunHandler = func(cmd *exec.FakeCmd) error {
+		ranCommands = append(ranCommands, cmd)
+		return nil
+	}
+
+	service := compose.AddService("test-service", ServiceConfig{}, []ServiceNetworkConfig{})
+	cmd := service.SudoExec("ping", "google.com")
+	err := cmd.Run()
+	assert.Nil(t, err)
+	assert.Equal(t, len(ranCommands), 1)
+	assert.Equal(t, ranCommands[0].Path, "docker-compose")
+	assert.Equal(t, ranCommands[0].Args, []string{"exec", "--privileged", "test-service", "ping", "google.com"})
+}
