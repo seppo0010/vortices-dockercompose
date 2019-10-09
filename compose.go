@@ -91,6 +91,33 @@ func (c *Compose) AddNetwork(name string, networkConfig NetworkConfig) *Network 
 	return network
 }
 
+func (c *Compose) execOrFail(context, name string, arg ...string) ([]byte, error) {
+	cmd := c.exec.New(name, arg...)
+	cmd.SetDir(c.getTmpDir())
+	stdoutPipe, err := cmd.StdoutPipe()
+	stderrPipe, err := cmd.StderrPipe()
+	err = cmd.Start()
+	if err != nil {
+		log.Errorf("failed to start %s: %s", context, err.Error())
+		return nil, fmt.Errorf("failed to start %s: %s", context, err.Error())
+	}
+	stdout, err := ioutil.ReadAll(stdoutPipe)
+	if err != nil {
+		log.Errorf("failed to read stdout %s: %s", context, err.Error())
+		return nil, fmt.Errorf("failed to read stdout %s: %s", context, err.Error())
+	}
+	stderr, err := ioutil.ReadAll(stderrPipe)
+	if err != nil {
+		log.Errorf("failed to read stderr %s: %s", context, err.Error())
+		return nil, fmt.Errorf("failed to read stderr %s: %s", context, err.Error())
+	}
+	if err = cmd.Wait(); err != nil {
+		log.Errorf("failed to %s: %s\n%s", context, err.Error(), string(stderr))
+		return nil, fmt.Errorf("failed to %s: %s\n%s", context, err.Error(), string(stderr))
+	}
+	return stdout, nil
+}
+
 func (c *Compose) Start() error {
 	c.status = composeStatusRunning
 	err := c.os.MkdirAll(c.getTmpDir(), 0744)
@@ -118,11 +145,8 @@ func (c *Compose) Start() error {
 	log.Infof("starting docker compose")
 	defer log.Infof("finished starting docker compose")
 
-	cmd := c.exec.New("docker-compose", "up", "-d")
-	cmd.SetDir(c.getTmpDir())
-
-	if err := cmd.Run(); err != nil {
-		log.Errorf("failed to start docker compose: %s", err.Error())
+	_, err = c.execOrFail("start docker compose", "docker-compose", "up", "-d")
+	if err != nil {
 		return errors.New("failed to start docker-compose")
 	}
 
@@ -138,11 +162,8 @@ func (c *Compose) Stop() error {
 	log.Infof("stopping docker compose")
 	defer log.Infof("finished stopping docker compose")
 
-	cmd := c.exec.New("docker-compose", "down")
-	cmd.SetDir(c.getTmpDir())
-
-	if err := cmd.Run(); err != nil {
-		log.Errorf("failed to stop docker compose: %s", err.Error())
+	_, err := c.execOrFail("stop docker compose", "docker-compose", "down")
+	if err != nil {
 		return errors.New("failed to stop docker-compose")
 	}
 
@@ -159,6 +180,7 @@ func (c *Compose) BuildDockerPath(name, path string) (string, error) {
 
 	cmd := c.exec.New("docker", "build", path)
 	outPipe, err := cmd.StdoutPipe()
+	errPipe, err := cmd.StderrPipe()
 	err = cmd.Start()
 	if err != nil {
 		return "", fmt.Errorf("failed to build docker image at path %s: %s", path, err.Error())
@@ -167,8 +189,12 @@ func (c *Compose) BuildDockerPath(name, path string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to read docker image at path %s: %s", path, err.Error())
 	}
+	stderr, err := ioutil.ReadAll(errPipe)
+	if err != nil {
+		return "", fmt.Errorf("failed to read docker stderr at path %s: %s", path, err.Error())
+	}
 	if err = cmd.Wait(); err != nil {
-		return "", fmt.Errorf("failed to build docker image at path %s: %s", path, err.Error())
+		return "", fmt.Errorf("failed to build docker image at path %s: %s\n%s", path, err.Error(), string(stderr))
 	}
 	submatches := regexp.MustCompile(`Successfully built ([a-fA-F0-9]*)`).FindStringSubmatch(string(out))
 	if len(submatches) == 0 {
