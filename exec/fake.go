@@ -2,6 +2,7 @@ package exec
 
 import (
 	"io"
+	"os"
 )
 
 type FakeCmd struct {
@@ -76,6 +77,14 @@ func (f *FakeCmd) Run() error {
 		p.Close()
 	}
 	return err
+}
+
+func (f *FakeCmd) Kill() error {
+	return nil
+}
+
+func (f *FakeCmd) Signal(sig os.Signal) error {
+	return nil
 }
 
 type FakeCommander struct {
