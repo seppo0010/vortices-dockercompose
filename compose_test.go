@@ -172,3 +172,18 @@ func TestBuildDocker(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, img, "abcdef")
 }
+
+func TestLogsIntegration(t *testing.T) {
+	compose := NewCompose(ComposeConfig{})
+	compose.AddService("test-service", ServiceConfig{
+		Image:   "ubuntu",
+		Command: []string{"echo", "foo", "bar", "baz"},
+	}, nil)
+	err := compose.Start()
+	assert.Nil(t, err)
+	logs, err := compose.Logs()
+	assert.Nil(t, err)
+	assert.Contains(t, logs, "foo bar baz")
+	err = compose.Stop()
+	assert.Nil(t, err)
+}

@@ -153,6 +153,15 @@ func (c *Compose) Start() error {
 	return nil
 }
 
+func (c *Compose) Logs(machine ...string) (string, error) {
+	logs, err := c.execOrFail("docker compose logs", "docker-compose", append([]string{"logs", "--no-color"}, machine...)...)
+	if err != nil {
+		return "", errors.New("failed to run docker-compose logs")
+	}
+
+	return string(logs), nil
+}
+
 func (c *Compose) Stop() error {
 	if c.status != composeStatusRunning {
 		return errors.New("cannot stop if status is not running")
