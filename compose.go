@@ -179,6 +179,21 @@ func (c *Compose) Stop() error {
 	return nil
 }
 
+func (c *Compose) Clear() error {
+	if c.status == composeStatusRunning {
+		return errors.New("cannot clear if status is running")
+	}
+
+	log.Infof("clearing docker compose")
+	defer log.Infof("finished clearing docker compose")
+
+	if c.tmpDir == "" {
+		return nil
+	}
+
+	return c.os.RemoveAll(c.tmpDir)
+}
+
 func (c *Compose) BuildDockerPath(name, path string) (string, error) {
 	if !c.os.FileExists(path) {
 		return "", fmt.Errorf("path %s does not exist", path)

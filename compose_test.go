@@ -13,7 +13,19 @@ import (
 
 func mockCompose() (*Compose, *exec.FakeCommander, *os.FakeOS) {
 	compose := NewCompose(ComposeConfig{})
-	fakeExec := &exec.FakeCommander{}
+	fakeExec := &exec.FakeCommander{
+		RunHandler: func(cmd *exec.FakeCmd) error { return nil },
+		StderrHandler: func(cmd *exec.FakeCmd) (io.ReadCloser, error) {
+			r, w := io.Pipe()
+			w.Close()
+			return r, nil
+		},
+		StdoutHandler: func(cmd *exec.FakeCmd) (io.ReadCloser, error) {
+			r, w := io.Pipe()
+			w.Close()
+			return r, nil
+		},
+	}
 	fakeOS := &os.FakeOS{}
 	compose.exec = fakeExec
 	compose.os = fakeOS
@@ -186,4 +198,20 @@ func TestLogsIntegration(t *testing.T) {
 	assert.Contains(t, logs, "foo bar baz")
 	err = compose.Stop()
 	assert.Nil(t, err)
+}
+
+func TestClear(t *testing.T) {
+	compose, _, fakeOS := mockCompose()
+	compose.AddService("test-service", ServiceConfig{}, nil)
+
+	err := compose.Start()
+	assert.Nil(t, err)
+	err = compose.Stop()
+	assert.Nil(t, err)
+
+	before := fakeOS.Dirs
+	err = compose.Clear()
+	assert.Nil(t, err)
+	after := fakeOS.Dirs
+	assert.Equal(t, len(before)-1, len(after))
 }
