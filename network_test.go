@@ -17,7 +17,7 @@ func TestCIDR(t *testing.T) {
 		if len(f.Args) == 4 && f.Args[0] == "inspect" && f.Args[1] == "-f" && f.Args[2] == "{{(index .IPAM.Config 0).Subnet}}" && f.Args[3] == fmt.Sprintf("%s_network1", strings.Replace(compose.id, "-", "", -1)) {
 			r, w := io.Pipe()
 			go func() {
-				w.Write([]byte("1.2.3.4/5"))
+				w.Write([]byte("1.2.3.4/5\n"))
 				w.Close()
 			}()
 			return r, nil

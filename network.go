@@ -38,5 +38,5 @@ func (n *Network) GetCIDR() (string, error) {
 		log.Errorf("failed to wait inspect network settings: %s", err.Error())
 		return "", err
 	}
-	return string(stdoutStr), nil
+	return strings.TrimSpace(string(stdoutStr)), nil
 }
