@@ -80,7 +80,7 @@ func (c *Compose) AddService(name string, serviceConfig ServiceConfig, networks 
 }
 
 func (c *Compose) AddNetwork(name string, networkConfig NetworkConfig) *Network {
-	network := &Network{NetworkConfig: networkConfig, name: name}
+	network := &Network{NetworkConfig: networkConfig, name: name, compose: c}
 	if c.status != composeStatusSetup {
 		panic("cannot register a network after started")
 	}
